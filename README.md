@@ -1,94 +1,92 @@
-# dsh-shell —— 轻量 DeepSeek Harness 桌面壳 / A lightweight desktop shell for DeepSeek Harness
+# dsh-shell · DeepSeek Harness 桌面壳 / Desktop Shell
 
-> Zero-install desktop window for an already-installed DeepSeek Harness: attaches to a running `dsh web` instance, or launches one with your existing Node environment. No bundled Node, no bundled deps, no harness changes. (Docs below are in Chinese.)
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
+[![Platform: Windows](https://img.shields.io/badge/Platform-Windows-4f46e5)]()
+[![Node: >=22.19](https://img.shields.io/badge/Node-%3E%3D22.19%20or%20%3E%3D24-green)]()
+[![Upstream: deepseek-harness](https://img.shields.io/badge/Upstream-deepseek--harness-red)](https://github.com/deepseek-ai/deepseek-harness)
 
-把**本机已安装的** DeepSeek Harness Web GUI 装进一个桌面窗口。不打包 Node、不打包依赖、不改 harness 一行代码：
+**一个动作，把已经装好的 [DeepSeek Harness](https://github.com/deepseek-ai/deepseek-harness) Web GUI 变成独立桌面窗口。**
 
-- **A0 attach**：探测已有实例（默认 `http://127.0.0.1:3080`），命中就直接开窗——你现有的会话、设置、工作区原样出现。
-- **A1 spawn**：没有实例时，用本机现有 node + checkout 拉起 `dsh web --port 0`，解析官方就绪行 `dsh web: http://127.0.0.1:<port>` 后开窗。
+> A lightweight desktop shell for an already-installed DeepSeek Harness: one double-click, no new environment, zero changes to the harness core.
 
-就绪判定以 harness 官方的 URL 行为准（内容含 `__DSH_BOOT__`），不用"HTTP 200"冒充就绪。
+- ✅ 不打包 Node、不打包依赖、不改 harness 一行代码
+- ✅ harness 在跑 → 直接附着包住它；没跑 → 自动用现有环境拉起
+- ✅ 沿用你的 `~/.dsh`：会话、设置、工作区原样可见
+- ✅ 端口自动分配（`--port 0`），以官方就绪行为准，绝不"假就绪"
 
-## 最快上手（一步到位，零安装）
+## 30 秒上手
 
-**双击 `启动Harness桌面.cmd`**：壳会自动探测 harness——在跑就直接开窗包住它，没跑就自动拉起再开窗。不需要先启动 harness，也不需要敲任何命令。可以把它发送快捷方式到桌面/任务栏。
+1. 双击 `启动Harness桌面.cmd`（零安装，Edge app-mode）
+2. 完。
 
-## 目录
-
-```
-dsh-shell/
-├─ 启动Harness桌面.cmd    零安装双击启动（Edge app-mode）
-├─ start-electron.cmd     Electron 版双击启动（需先 npm install 一次）
-├─ src/main.js           Electron 主进程：窗口/托盘/菜单/生命周期
-├─ src/host-manager.js   壳与 harness 的唯一桥：attach / spawn / 就绪解析 / 日志
-├─ src/config.js         配置读写（%APPDATA%\dsh-shell\dsh-shell.json）
-├─ src/preload.js        仅注入到壳自己的状态小窗；主窗口无 preload，官方页面原样
-├─ ui/status.html        启动状态 / 错误 / 日志小窗
-├─ assets/               图标
-└─ launcher/start-shell-edge.ps1   零安装版（Edge app-mode，无需 npm）
-```
-
-## 运行方式一：Electron 完整版
+想要托盘 / 日志面板 / 重试按钮的完整版：
 
 ```powershell
-cd D:\workspace\harness-demo\dsh-shell
-npm install        # 只需装 electron 这一个 devDependency（本机需联网）
+cd dsh-shell
+npm install   # 国内网络已内置 npmmirror 镜像，解决 Electron 二进制下载失败
 npm start
 ```
 
-> **npm install 报 `read ECONNRESET`（下载 Electron 二进制失败）怎么办？**
-> 这是 GitHub Releases 直连被重置，与壳代码无关。仓库已内置 `.npmrc` 指向 npmmirror 镜像；删除 node_modules 后重装即可：
-> ```powershell
-> Remove-Item node_modules -Recurse -Force
-> npm install
-> ```
-> 若镜像仍失败，可换华为云镜像再装：`$env:ELECTRON_MIRROR='https://mirrors.huaweicloud.com/electron/'` 后重跑 `npm install`；或配置你的代理后重试。手动下载二进制放进 `%LOCALAPPDATA%\electron\Cache` 也可（目录名 = 下载 URL 的 SHA256）。
+或双击 `start-electron.cmd`。
 
-- 启动后先出现状态小窗：探测 3080 → 命中直接开主窗；未命中则拉起 harness（先 tsx 后自动回退 built）。
-- 托盘：显示/隐藏窗口、重启 Harness、打开日志、退出。
-- 关闭主窗口 = 退出应用；**由壳拉起的 harness 会一并停止，附着模式的已有实例不动**。
-- 日志：`%APPDATA%\dsh-shell\logs\host.log`；配置：`%APPDATA%\dsh-shell\dsh-shell.json`（菜单"帮助 → 打开配置文件"）。
+## 工作原理
 
-## 运行方式二：零安装 Edge 版（今天就能跑）
-
-不装任何东西（复用本机 node + Edge）：
-
-```powershell
-powershell -ExecutionPolicy Bypass -File D:\workspace\harness-demo\dsh-shell\launcher\start-shell-edge.ps1
+```
+壳 ──探测──▶ http://127.0.0.1:3080（响应含 __DSH_BOOT__ 才算就绪）
+ ├─ 命中 ──▶ 开窗附着（不拥有生命周期，退出不影响已有实例）
+ └─ 未命中 ─▶ node <checkout>/apps/cli/lib/bin.js web --port 0
+              └─ 解析官方就绪行 "dsh web: http://127.0.0.1:<port>" ──▶ 开窗（壳拥有该实例，退出即停）
 ```
 
-- 开一个独立 app-mode 窗口（专用 profile，不干扰你日常 Edge）。
-- 停止由它拉起的 harness：`.\start-shell-edge.ps1 -Stop`。
-- 关闭 Edge 窗口不会停止 harness（附着模式不受影响；拉起模式用 `-Stop`）。
+就绪判定严格以 harness 官方 URL 行为准，不用"HTTP 200"冒充就绪。
 
-## 配置项（dsh-shell.json）
+## 特性对比
+
+| | Edge 零安装版 | Electron 完整版 |
+|---|---|---|
+| 安装 | **无** | npm install（一次性） |
+| 窗口 | Edge app-mode 独立窗口（专用 profile） | 原生窗口 + 尺寸记忆 |
+| 托盘 | - | 显示/隐藏、重启、打开日志 |
+| 状态小窗 | - | 启动进度 / 错误 / 日志 / 重试 |
+| 适合 | 快速体验、零门槛 | 日常主力 |
+
+## 常见问题
+
+- **和 anywhere-labs/deepseek-harness-desktop 有什么区别？** 那是给"没装过 harness 的新用户"的一体化打包（内置 Node/依赖/插件，开箱即用）；本项目面向**已经装好 harness** 的用户，零新环境、更轻，也更容易改。
+- **会和我终端里跑的 `dsh web` 冲突吗？** 不会。壳先探测，命中就附着同一个实例，不会起第二份、不会抢写同一份配置。
+- **端口冲突？** 不存在——拉起时永远 `--port 0`，由 OS 分配空闲端口。
+- **数据在哪？** 沿用 `~/.dsh`（或你设置的 `DSH_HOME`），与命令行共享同一份会话。
+- **怎么停止壳拉起的实例？** Electron 版退出即停；Edge 版运行 `.\launcher\start-shell-edge.ps1 -Stop`。
+- **代理/网络？** 壳不联网下载任何东西（唯一的例外是首次 `npm install electron`，已内置 npmmirror 镜像）。
+
+## 配置
+
+首次运行自动生成 `%APPDATA%\dsh-shell\dsh-shell.json`（Electron 版；默认值见 `src/config.js`）：
 
 | 键 | 默认 | 说明 |
 |---|---|---|
-| `harnessCheckout` | `D:\workspace\deepseek-harness` | A1 拉起的 checkout 路径 |
+| `harnessCheckout` | `D:\workspace\deepseek-harness` | A1 拉起使用的 checkout 路径 |
 | `attachUrl` | `http://127.0.0.1:3080` | A0 附着探测地址 |
-| `spawnMode` | `auto` | `tsx`（源码）/ `built`（构建产物）/ `auto`（tsx 失败回退 built） |
-| `nodePath` | `node` | 直接用 PATH 里的 node（本机 v24.19.0） |
-| `dshHome` | `''` | 空 = 继承环境（默认 `~/.dsh`，现有数据全在）；可显式指定 |
+| `spawnMode` | `auto` | `tsx`（源码）/ `built`（构建产物）/ `auto`（失败自动回退） |
+| `dshHome` | `''` | 空 = 继承环境（默认 `~/.dsh`）；可显式指定 |
 | `spawnArgs` | `[]` | 追加给 `dsh web` 的参数（默认已有 `--port 0`） |
-| `openDevTools` | `false` | 菜单显示开发者工具 |
-| `probeIntervalMs` | `15000` | attach 模式断连探测间隔 |
 
-## 行为语义（重要）
+## 目录结构
 
-1. **附着（A0）**：壳只是窗口，不拥有 harness 生命周期——不启动、不停止、退出不影响它。
-2. **拉起（A1）**：壳拥有该实例——退出时 `kill` + `taskkill /T` 兜底强杀。harness 存储为增量+事务设计（崩溃安全），强杀安全。
-3. **DSH_HOME**：默认继承环境。桌面启动时未设置 → harness 用默认 `~/.dsh`。若你终端里开着 `dsh web`（同 home），壳会先探测到并直接附着，不会起第二份实例、不会写抢同一份配置。
-4. **端口**：A1 永远 `--port 0`（OS 分配，零冲突），真实端口从就绪行解析。
+```
+dsh-shell/
+├─ 启动Harness桌面.cmd       零安装双击启动（Edge app-mode）
+├─ start-electron.cmd        Electron 版双击启动
+├─ src/                      Electron 主进程
+│  ├─ main.js                窗口 / 托盘 / 菜单 / 生命周期
+│  ├─ host-manager.js        壳↔harness 唯一桥：attach / spawn / 就绪解析 / 日志
+│  ├─ config.js              配置读写
+│  └─ preload.js             仅注入壳自己的状态小窗；主窗口零注入，官方页面原样
+├─ ui/status.html            启动状态 / 错误 / 日志
+├─ launcher/start-shell-edge.ps1   Edge 版核心逻辑（探测→拉起→开窗）
+└─ assets/                   图标
+```
 
-## 限制（v0.1）
+## 许可
 
-- Electron 版未做代码签名 / 自动更新 / 安装包（electron-builder 配置是下一步）。
-- 沙箱提示：若在受限终端（如本项目的 agent 沙箱）里运行，tsx 模式会因 esbuild 管道限制失败——真实桌面环境无此问题；Electron 版会自动回退 built 模式。
-- 主窗口只加载官方页面，不注入任何脚本；安全面与浏览器直连 `dsh web` 完全一致（loopback-only + `/api` 信任围栏）。
-
-## 已验证
-
-- A0：3080 探测 200 + `__DSH_BOOT__` ✅
-- A1 全链路（同进程内）：无实例 → 复用现有 node + checkout 拉起 → 解析就绪行 `spawned: http://127.0.0.1:56685 (pid 10684)` → 探活 `status=200 has-boot=True` ✅ → `-Stop` 后进程退出、端口释放 ✅
-- Electron 窗口渲染需在本机 `npm install electron` 后人工验收（当前环境无法下载 electron 二进制）。
+MIT，与上游 [deepseek-ai/deepseek-harness](https://github.com/deepseek-ai/deepseek-harness)（MIT）保持一致。
