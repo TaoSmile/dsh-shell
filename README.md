@@ -37,11 +37,16 @@
 
 ## 快速开始
 
-**零安装版（推荐先试）**：双击 `启动Harness桌面.cmd`，完。
+**零安装版（推荐先试）**：双击 `启动Harness桌面.vbs`（无黑窗，失败弹提示），完。
 
 ```
-启动Harness桌面.cmd ──▶ 自动探测/拉起 harness ──▶ 独立桌面窗口（Edge app-mode）
+启动Harness桌面.vbs ──▶ 自动探测/拉起 harness ──▶ 独立桌面窗口（Edge app-mode）
 ```
+
+- 习惯看控制台输出的可以双击 `启动Harness桌面.cmd`（行为相同，保留可见窗口）。
+- **桌面快捷方式**（带白鲸图标）：`powershell -File launcher\start-shell-edge.ps1 -CreateDesktopShortcut`，执行一次即可。
+- 开机自启（**可选，默认关闭**）：双击 `开机自启开关.vbs` 一键切换——弹窗显示当前状态，确认后生效。命令行等价：`-ToggleAutostart`。
+- Edge 版体验特性：**原生启动动画**（双击后立即弹出小窗：白鲸图标 + 流动进度条，harness 就绪后自动打开 GUI 窗口）、单实例复用（不会重复拉起）、首次启动**屏幕居中显示**（小屏自动收缩）+ 之后记住窗口位置、**关闭窗口自动停掉由它拉起的 harness**（附着模式绝不干预已有实例）。
 
 **完整版（托盘 / 状态窗 / 日志 / 重试）**：
 
@@ -73,9 +78,10 @@ flowchart LR
 | | 🚀 Edge 零安装版 | 🖥️ Electron 完整版 |
 |---|---|---|
 | 安装 | **无** | npm install（一次性） |
-| 窗口 | Edge app-mode 独立窗口（专用 profile） | 原生窗口 + 尺寸记忆 |
+| 窗口 | Edge app-mode 独立窗口（专用 profile，记住位置） | 原生窗口 + 尺寸记忆 |
 | 托盘 | - | 显示/隐藏、重启、打开日志 |
 | 状态小窗 | - | 启动进度 / 错误 / 日志 / 重试 |
+| 单实例 / 关窗即停 | ✅ 复用探测 + 关窗自动停拉起的实例 | ✅ 单实例锁 + 退出即停 |
 | 适合 | 快速体验、零门槛 | 日常主力 |
 
 ## 和其他桌面端有什么不同
@@ -111,9 +117,10 @@ flowchart LR
 ## Roadmap
 
 - [x] A0 附着 / A1 拉起 / Edge 零安装版 / Electron 壳 + 托盘
+- [x] T1 体验：白鲸图标、原生启动动画、桌面快捷方式、无黑窗、单实例复用、窗口居中与记忆、关窗即停、开机自启可选开关
 - [ ] electron-builder 打包：NSIS 安装包 + 便携版 + 图标
 - [ ] 托盘显示运行中的 job / goal 状态
-- [ ] 开机自启、`dsh://` 深链
+- [ ] `dsh://` 深链
 - [ ] 桌面通知（走 harness 官方插件体系，不进核心）
 - [ ] macOS / Linux 适配
 
@@ -121,23 +128,27 @@ flowchart LR
 
 - **会和我终端里跑的 `dsh web` 冲突吗？** 不会。壳先探测，命中就附着同一个实例，不会起第二份、不会抢写同一份配置。
 - **数据在哪？** 沿用 `~/.dsh`（或你设置的 `DSH_HOME`），与命令行共享同一份会话。
-- **怎么停止壳拉起的实例？** Electron 版退出即停；Edge 版运行 `.\launcher\start-shell-edge.ps1 -Stop`。
+- **怎么停止壳拉起的实例？** Edge 版关闭窗口即自动停止（仅限它自己拉起的）；也可手动 `.\launcher\start-shell-edge.ps1 -Stop`。Electron 版退出即停。附着模式（A0）两者都不干预。
 - **壳会联网下载东西吗？** 不会。唯一例外是首次 `npm install electron`（已内置 npmmirror 镜像）。
 
 ## 目录结构
 
 ```
 dsh-shell/
-├─ 启动Harness桌面.cmd         零安装双击启动（Edge app-mode）
+├─ 启动Harness桌面.vbs          零安装双击启动（无黑窗，推荐）
+├─ 启动Harness桌面.cmd         零安装双击启动（可见控制台输出）
+├─ 开机自启开关.vbs             开机自启开关（可选，默认关闭）
 ├─ start-electron.cmd          Electron 版双击启动
 ├─ src/                        Electron 主进程
 │  ├─ main.js                  窗口 / 托盘 / 菜单 / 生命周期
 │  ├─ host-manager.js          壳↔harness 唯一桥：attach / spawn / 就绪解析 / 日志
 │  ├─ config.js                配置读写
 │  └─ preload.js               仅注入壳自己的状态小窗
-├─ ui/status.html              启动状态 / 错误 / 日志
-├─ launcher/start-shell-edge.ps1   Edge 版核心逻辑
-└─ assets/                     图标
+├─ ui/
+│  └─ status.html              Electron 版启动状态 / 错误 / 日志
+├─ launcher/start-shell-edge.ps1   Edge 版核心逻辑（含原生启动动画）
+├─ scripts/make-icon.ps1       图标生成器（白鲸图形，可改样式重新生成）
+└─ assets/                     icon.png / icon.ico / tray.png
 ```
 
 ## 参与贡献
