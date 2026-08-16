@@ -1,0 +1,8 @@
+node_modules/
+*.log
+logs/
+.edge-shell-profile/
+dist/
+out/
+.DS_Store
+Thumbs.db

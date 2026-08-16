@@ -1,0 +1,104 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <title>DeepSeek Harness</title>
+  <style>
+    :root { color-scheme: dark; }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: "Segoe UI", "Microsoft YaHei", sans-serif;
+      background: #14161c; color: #e6e8ee; height: 100vh;
+      display: flex; flex-direction: column; padding: 18px;
+      -webkit-user-select: none; user-select: none;
+    }
+    .head { display: flex; align-items: center; gap: 10px; margin-bottom: 14px; }
+    .logo {
+      width: 34px; height: 34px; border-radius: 8px;
+      background: linear-gradient(135deg, #4f46e5, #1e1b4b);
+      display: flex; align-items: center; justify-content: center;
+      color: #fff; font-weight: 700; font-size: 17px;
+    }
+    h1 { font-size: 15px; font-weight: 600; }
+    .sub { font-size: 11px; color: #8b90a0; margin-top: 2px; }
+    .spinner {
+      width: 22px; height: 22px; border-radius: 50%;
+      border: 3px solid #2c3040; border-top-color: #4f46e5;
+      animation: spin 0.9s linear infinite; margin: 10px auto;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    #msg { font-size: 13px; text-align: center; line-height: 1.6; margin: 8px 0 4px; }
+    #url { font-size: 12px; color: #8b90a0; text-align: center; margin-bottom: 10px; }
+    #log {
+      flex: 1; overflow-y: auto; background: #0d0f13; border: 1px solid #2c3040;
+      border-radius: 6px; padding: 8px; font: 11px/1.5 Consolas, monospace;
+      color: #9aa0b0; white-space: pre-wrap; word-break: break-all;
+      display: none; margin-bottom: 10px;
+    }
+    .actions { display: flex; gap: 8px; justify-content: center; flex-wrap: wrap; }
+    button {
+      background: #232734; color: #e6e8ee; border: 1px solid #363c4f;
+      border-radius: 6px; padding: 6px 14px; font-size: 12px; cursor: pointer;
+    }
+    button:hover { background: #2c3242; }
+    button.primary { background: #4f46e5; border-color: #4f46e5; }
+    button.primary:hover { background: #5b52ee; }
+    .err #msg { color: #f87171; }
+    .err .spinner { display: none; }
+  </style>
+</head>
+<body>
+  <div class="head">
+    <div class="logo">D</div>
+    <div>
+      <h1>DeepSeek Harness</h1>
+      <div class="sub" id="phaseLabel">正在连接…</div>
+    </div>
+  </div>
+  <div class="spinner" id="spinner"></div>
+  <div id="msg">正在探测已有 Harness 实例…</div>
+  <div id="url"></div>
+  <pre id="log"></pre>
+  <div class="actions">
+    <button id="btnRetry" class="primary" style="display:none">重试</button>
+    <button id="btnBrowser" style="display:none">在浏览器中打开</button>
+    <button id="btnLogs">打开日志</button>
+    <button id="btnConfig">打开配置</button>
+    <button id="btnCancel">取消</button>
+  </div>
+  <script>
+    const $ = id => document.getElementById(id)
+    const PHASE_TEXT = {
+      idle: '空闲', attaching: '正在探测已有实例', starting: '正在启动 Harness',
+      ready: '已就绪', error: '出错了', stopped: '已停止'
+    }
+    let current = null
+
+    function render (s) {
+      current = s
+      $('phaseLabel').textContent = s.phase === 'error' ? '启动失败' : (PHASE_TEXT[s.phase] || s.phase)
+      $('msg').textContent = s.message || ''
+      $('url').textContent = s.url ? `将打开：${s.url}` : ''
+      document.body.classList.toggle('err', s.phase === 'error')
+      $('spinner').style.display = (s.phase === 'attaching' || s.phase === 'starting') ? 'block' : 'none'
+      const logText = (s.logTail || []).join('\n')
+      if (logText) { $('log').style.display = 'block'; $('log').textContent = logText; $('log').scrollTop = 1e9 } else { $('log').style.display = 'none' }
+      $('btnRetry').style.display = s.phase === 'error' ? '' : 'none'
+      $('btnBrowser').style.display = s.url && /^https?:/.test(s.url) ? '' : 'none'
+      $('btnCancel').textContent = s.phase === 'error' ? '退出' : '取消'
+    }
+
+    async function poll () {
+      try { render(await window.dshShell.status()) } catch {}
+    }
+    setInterval(poll, 700)
+    poll()
+
+    $('btnRetry').onclick = () => window.dshShell.retry()
+    $('btnBrowser').onclick = () => { if (current && current.url) window.dshShell.openExternal(current.url) }
+    $('btnLogs').onclick = () => window.dshShell.openLogs()
+    $('btnConfig').onclick = () => window.dshShell.openConfig()
+    $('btnCancel').onclick = () => window.dshShell.cancel()
+  </script>
+</body>
+</html>

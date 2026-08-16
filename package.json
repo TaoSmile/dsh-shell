@@ -1,0 +1,13 @@
+{
+  "name": "dsh-shell",
+  "version": "0.1.0",
+  "private": true,
+  "description": "DeepSeek Harness 轻量桌面壳：复用本机已安装的 harness（A0 附着已有实例 / A1 用现有 Node 环境拉起），不打包 Node 与依赖",
+  "main": "src/main.js",
+  "scripts": {
+    "start": "electron ."
+  },
+  "devDependencies": {
+    "electron": "^35.0.0"
+  }
+}
