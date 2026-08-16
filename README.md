@@ -92,13 +92,9 @@ flowchart LR
 
 ## 预览
 
-<!-- 截图上传后取消下面注释（图片放 assets/screenshots/）：
-| 启动状态窗 | 主窗口 |
-|---|---|
-| ![启动状态窗](assets/screenshots/splash.png) | ![主窗口](assets/screenshots/main.png) |
--->
-
-> 截图待补充：跑起来后按 `Win+Shift+S` 截两张（启动状态窗 + 主窗口），在 GitHub 仓库页 `assets/` → *Add file → Upload files* 拖入 `screenshots/` 目录，再取消上面的注释即可。
+| 主窗口（官方 Web GUI 原样呈现） |
+|---|
+| ![主窗口](assets/screenshots/main.png) |
 
 ## 配置
 

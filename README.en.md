@@ -92,13 +92,9 @@ All-in-one packages (anywhere-labs, xiincs, etc.) bundle Node and dependencies f
 
 ## Screenshots
 
-<!-- After uploading, uncomment below (images under assets/screenshots/):
-| Status window | Main window |
-|---|---|
-| ![Status window](assets/screenshots/splash.png) | ![Main window](assets/screenshots/main.png) |
--->
-
-> TODO: press `Win+Shift+S` with the shell running, upload the two shots to `assets/screenshots/` via *Add file → Upload files*, then uncomment the block above.
+| Main window (official Web GUI, untouched) |
+|---|
+| ![Main window](assets/screenshots/main.png) |
 
 ## Configuration
 
